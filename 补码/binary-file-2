@@ -1,0 +1,187 @@
+<template>
+    <s-page-container :background="background">
+        <Query
+            :query="query"
+            :label="label"
+            :label-icon="labelImg"
+            :query-edit-invisible="queryEditInvisible"
+        >
+        </Query>
+        <Article
+            :query="query"
+            :content="swanData.hasOwnProperty('dplContent') ? dplContent : content"
+            :picture="picture"
+        >
+            <template v-if="webUrl" v-slot:footer="footer">
+                <gesture-detector @tap="onWebviewEntranceTap">
+                    <opacity class="back-opacity" active-class="back-opacity-dot-5">
+                        <container :class="classAdapter('footer-container')">
+                            <opacity class="footer-opacity">
+                                <row class="footer-row">
+                                    <text :class="classAdapter('footer-text')">查看原始网页</text>
+                                    <network-image
+                                        src="https://duerstatic.cdn.bcebos.com/swan/lottery_views/webview-result.png@f_webp"
+                                        :class="classAdapter('footer-image')"
+                                    >
+                                    </network-image>
+                                </row>
+                            </opacity>
+                        </container>
+                    </opacity>
+                </gesture-detector>
+            </template>
+        </Article>
+        <hint v-if="hints && hints.length && hints[0]" :hints="hints" background="gradient"> </hint>
+    </s-page-container>
+</template>
+<script data-is-style>
+atom.reusableStylesManager.add([
+    [
+        'footer-container',
+        ContainerStyles.c({
+            width: 864,
+            height: 100
+        })
+    ],
+    [
+        'footer-opacity',
+        OpacityStyles.c({
+            opacity: 0.8
+        })
+    ],
+    [
+        'footer-text',
+        TextStyles.c({
+            fontSize: 24
+        })
+    ],
+    [
+        'footer-image',
+        NetworkImageStyles.c({
+            width: 32,
+            height: 32,
+            alwaysApplyFilterQuality: true,
+        }),
+    ],
+    [
+        'footer-row',
+        RowStyles.c({
+            mainAxisAlignment: MainAxisAlignment.center
+        })
+    ],
+    [
+        'back-opacity',
+        OpacityStyles.c({
+            opacity: 1
+        })
+    ],
+    [
+        'back-opacity-dot-5',
+        OpacityStyles.c({
+            opacity: 0.5
+        })
+    ]
+]);
+if (typeof MediaQueryCondition !== 'undefined') {
+    atom.reusableStylesManager.addWithMediaQuery(
+        new MediaQueryCondition({
+            minHeight: 960,
+        }),
+        [
+            [
+                'footer-container-t10',
+                ContainerStyles.c({
+                    width: 800,
+                    height: 160,
+                }),
+            ],
+            [
+                'footer-text-t10',
+                TextStyles.c({
+                    fontSize: 38,
+                }),
+            ],
+            [
+                'footer-image-t10',
+                NetworkImageStyles.c({
+                    width: 51,
+                    height: 51,
+                    alwaysApplyFilterQuality: true,
+                }),
+            ],
+        ],
+    );
+}
+</script>
+<script lang="ts">
+import Query from './Query.vue';
+import Article from './Article.vue';
+import {onMounted, PropType, inject} from '@atom-vue/vue';
+import recommendation from '@baidu/swan-ui-flutter/src/core/recommendation';
+import dcs from '@baidu/swan-ui-flutter/src/core/dcs';
+import page from '@baidu/swan-ui-flutter/src/core/page';
+interface BaseData {
+    swanData: {
+        queryInfo?: {
+            bgUrl?: string;
+            [propName: string]: any;
+        };
+        query?: string;
+        queryEditInvisible?: boolean;
+        label?: string;
+        labelImg?: string;
+        picture?: string;
+        content?: string;
+        dplContent?: string;
+        webUrl?: string;
+        hints?: string[];
+        [propName: string]: any;
+    };
+    statusBar: boolean;
+    [propName: string]: any;
+}
+export default {
+    components: {
+        Query,
+        Article
+    },
+    props: {
+        data: Object as PropType<BaseData>,
+        adapterEnabled: {
+            type: Boolean,
+            default: true,
+        },
+    },
+    setup(props) {
+        const swanData = props.data.swanData;
+        onMounted(() => {
+            const timeoutInSeconds = swanData.timeoutInMilliseconds / 1000 || 180;
+            page.timeout(timeoutInSeconds);
+            recommendation.deferRecommendationRequested(timeoutInSeconds - 5);
+        });
+        return {
+            classAdapter: inject('classAdapter'),
+            swanData,
+            background:
+                (swanData.queryInfo && swanData.queryInfo.bgUrl) ||
+                'https://duerstatic.cdn.bcebos.com/swan/swan-default-bg.png@f_webp,q_80',
+            query: swanData.query,
+            queryEditInvisible: swanData.queryEditInvisible,
+            label: swanData.label,
+            labelImg: swanData.labelImg,
+            picture: swanData.picture || '',
+            dplContent: swanData.dplContent,
+            content: swanData.content,
+            webUrl: swanData.webUrl,
+            hints: swanData.hints,
+            statusBar: props.data.statusBar,
+            onWebviewEntranceTap(): void {
+                dcs.openSwanBrowser({
+                    url: props.webUrl,
+                    title: props.query
+                });
+            }
+        };
+    }
+};
+</script>
